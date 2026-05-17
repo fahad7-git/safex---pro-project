@@ -1,0 +1,46 @@
+/* Print styles for scanner PDF export */
+
+@media print {
+  /* Hide the whole app chrome */
+  nav,
+  footer,
+  header,
+  button,
+  a[href],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ensure text is readable */
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Print only report container */
+  .print-report-root {
+    display: block !important;
+  }
+
+  /* Layout tweaks */
+  .print-report-root * {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Prevent ugly page splits */
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Pre telemetry formatting */
+  pre {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+}
+

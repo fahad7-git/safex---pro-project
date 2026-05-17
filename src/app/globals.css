@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-card backdrop-blur-md border border-border shadow-lg shadow-blue-900/20 rounded-xl;
+  }
+
+  .neon-text-green {
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+  }
+
+  .neon-text-blue {
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+  }
+
+  .neon-text-red {
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+  }
+
+  .neon-border {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(59, 130, 246, 0.2);
+  }
+
+  .bg-grid-pattern {
+    background-size: 40px 40px;
+    background-image: linear-gradient(to right, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+  }
+}
+
+/* Extra print rules for Scanner PDF export */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide global chrome */
+  nav,
+  footer,
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Print report container */
+  .print-report-root {
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  /* Typography tweaks */
+  pre {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    font-size: 10px;
+    line-height: 1.35;
+    color: #22c55e;
+  }
+
+  /* Avoid awkward splits */
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
