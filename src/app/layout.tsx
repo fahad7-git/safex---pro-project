@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ThreeAnimationsClient from "@/components/scanner/ThreeAnimationsClient";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-background text-foreground bg-grid-pattern relative`}
       >
+        <ThreeAnimationsClient className="fixed inset-0 -z-20 pointer-events-none opacity-20" />
         <div className="absolute inset-0 bg-background/90 -z-10 pointer-events-none" />
         <Navbar />
         <main className="flex-grow flex flex-col">
@@ -40,3 +42,4 @@ export default function RootLayout({
     </html>
   );
 }
+

@@ -41,10 +41,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Email content is required' }, { status: 400 });
     }
 
-    const hasUrgency = /urgent|immediately|action required|suspended/i.test(content);
-    const hasFinancial = /invoice|payment|wire|bank|transfer/i.test(content);
+    const hasUrgency = /urgent|immediately|action required|suspended|verify your account|account block/i.test(content);
+    const hasFinancial = /invoice|payment|wire|bank|transfer|credit card|billing/i.test(content);
+    const hasGenericGreeting = /dear (customer|user|member|client|recipient|friend)|valued (customer|user|client)/i.test(content);
     const linksMatch = content.match(/https?:\/\/[^\s>"]+/g) || [];
-    const links = [...new Set(linksMatch)] as string[]; // deduplicate
+    // Deduplicate without relying on downlevel iteration of Set
+    const links = Array.from(new Set(linksMatch)) as string[];
 
     // Extract Domain
     let domain = '';
@@ -81,6 +83,10 @@ export async function POST(req: Request) {
       score += 20;
       breakdown.push({ factor: 'Financial/Payment Request', scoreImpact: 20 });
     }
+    if (hasGenericGreeting) {
+      score += 15;
+      breakdown.push({ factor: 'Generic/Non-personalized Greeting', scoreImpact: 15 });
+    }
     
     if (domain && (!spf.valid || !dmarc.valid)) {
       score += 30;
@@ -112,13 +118,28 @@ export async function POST(req: Request) {
 
     const isFalsePositiveLikely = score > 50 && (!hasUrgency && !hasFinancial && spf.valid && dmarc.valid);
 
+    // Build clear, simple and detailed report dynamically based on indicators
+    const findingsList: string[] = [];
+    if (hasUrgency) findingsList.push("High-urgency language demanding immediate action");
+    if (hasFinancial) findingsList.push("References regarding billing, payments, or wire transfers");
+    if (hasGenericGreeting) findingsList.push("Generic, non-personalized greeting");
+    if (domain && (!spf.valid || !dmarc.valid)) {
+      const issues = [];
+      if (!spf.valid) issues.push("missing SPF record");
+      if (!dmarc.valid) issues.push("missing DMARC alignment");
+      findingsList.push(`Sender domain (${domain}) authentication issues (${issues.join(" & ")})`);
+    }
+    if (breakdown.some(b => b.factor.startsWith("Malicious Embedded Link Detected"))) {
+      findingsList.push("Malicious or unsafe web links embedded inside the content");
+    }
+
     let deepSummary = "This email appears safe and lacks any typical phishing characteristics.";
     if (score > 75) {
-      deepSummary = "CRITICAL WARNING: This email exhibits multiple severe phishing indicators, such as urgency, financial requests, and failed sender authentication. Do not click any links or download attachments.";
+      deepSummary = `CRITICAL WARNING: This email displays multiple severe security indicators: ${findingsList.join(", ")}. Do not click any links, open attachments, or disclose credentials.`;
     } else if (score > 50) {
-      deepSummary = "CAUTION: Our Safex-7 AI detected suspicious patterns in this email. Verify the sender's identity through a secondary channel before proceeding.";
+      deepSummary = `CAUTION: Suspicious patterns detected: ${findingsList.join(", ")}. Verify the sender identity through a trusted alternative channel before proceeding.`;
     } else if (score > 20) {
-      deepSummary = "NOTICE: This email has some minor irregularities, but lacks severe threat indicators.";
+      deepSummary = `NOTICE: Minor irregularities detected: ${findingsList.join(", ")}. Proceed with general caution.`;
     }
 
     return NextResponse.json({

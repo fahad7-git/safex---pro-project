@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion';
 import { ShieldAlert, Search, Activity, Lock, Globe, Server, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import ThreeAnimationsClient from '@/components/scanner/ThreeAnimationsClient';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -21,7 +20,6 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden flex-grow flex items-center justify-center">
-        <ThreeAnimationsClient className="absolute inset-0 -z-10 opacity-25" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/20 via-background to-background -z-10" />
         
         <div className="container mx-auto px-4 z-10">
@@ -82,7 +80,6 @@ export default function Home() {
 
       {/* Stats Section */}
       <section className="relative py-16 bg-card/50 border-y border-border/50">
-        <ThreeAnimationsClient className="absolute inset-0 -z-10 opacity-20" />
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             {[
@@ -109,7 +106,6 @@ export default function Home() {
 
       {/* Features Overview */}
       <section className="relative py-24 container mx-auto px-4">
-        <ThreeAnimationsClient className="absolute inset-0 -z-10 opacity-15" />
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Multi-Layer Verification Engine</h2>
           <p className="text-foreground/60">

@@ -231,6 +231,7 @@ function ThreeCanvas({
     }
 
     function resize() {
+      if (!mount) return;
       const rect = mount.getBoundingClientRect();
       const w = Math.max(1, Math.floor(rect.width));
       const h = Math.max(1, Math.floor(rect.height));
@@ -256,8 +257,8 @@ function ThreeCanvas({
           // twirl particles by scaling whole group
           group.scale.setScalar(1 + Math.sin(t * 0.6) * 0.03);
 
-          const points = mesh as THREE.Points;
-          const pos = points.geometry.getAttribute('position') as THREE.BufferAttribute;
+          const points = mesh as any;
+          const pos = points.geometry.getAttribute('position') as any;
           // animate a small offset based on time; keep light
           for (let i = 0; i < pos.count; i += 40) {
             const ix = i * 3;
@@ -270,18 +271,18 @@ function ThreeCanvas({
           }
           pos.needsUpdate = true;
         } else if (variant === 'ring') {
-          const glow = (group as any).__glow as THREE.Mesh | undefined;
+          const glow = (group as any).__glow as any | undefined;
           group.rotation.y = t * 0.45;
           group.rotation.x = 0.55 + Math.sin(t * 0.8) * 0.12;
           if (glow) glow.rotation.y = -t * 0.8;
           camera.position.z = 7 + Math.sin(t * 0.5) * 0.35;
         } else {
-          const points = (group as any).__points as THREE.Points | undefined;
-          const lineMesh = (group as any).__lineMesh as THREE.LineSegments | undefined;
+          const points = (group as any).__points as any | undefined;
+          const lineMesh = (group as any).__lineMesh as any | undefined;
           group.rotation.z = Math.sin(t * 0.22) * 0.1;
 
           if (points) {
-            const pos = points.geometry.getAttribute('position') as THREE.BufferAttribute;
+            const pos = points.geometry.getAttribute('position') as any;
             // animate z wave for a subset
             for (let i = 0; i < pos.count; i += 30) {
               const ix = i * 3;
@@ -323,7 +324,7 @@ function ThreeCanvas({
       disposed = true;
 
       try {
-        scene.traverse((obj) => {
+        scene.traverse((obj: any) => {
           if (!obj) return;
           const anyObj = obj as any;
           if (anyObj.geometry) anyObj.geometry.dispose?.();

@@ -328,6 +328,27 @@ async function checkSSL(hostname: string): Promise<{ valid: boolean; issuer?: st
 }
 */
 
+const TRUSTED_DOMAINS = [
+  'google.com', 'google.co.in', 'google.co.uk', 'google.ca', 'google.de',
+  'microsoft.com', 'microsoftonline.com', 'live.com', 'outlook.com', 'office.com',
+  'apple.com', 'icloud.com',
+  'facebook.com', 'instagram.com', 'whatsapp.com', 'messenger.com',
+  'github.com', 'githubusercontent.com',
+  'linkedin.com', 'twitter.com', 'x.com',
+  'amazon.com', 'amazon.in', 'amazon.co.uk',
+  'netflix.com', 'youtube.com', 'youtu.be',
+  'yahoo.com', 'wikipedia.org', 'cloudflare.com', 'openai.com', 'chatgpt.com',
+  'zoom.us', 'adobe.com', 'dropbox.com', 'salesforce.com', 'spotify.com', 'reddit.com',
+  'paypal.com', 'stripe.com', 'chase.com', 'bankofamerica.com', 'wellsfargo.com'
+];
+
+const BRAND_KEYWORDS = [
+  'google', 'microsoft', 'apple', 'facebook', 'instagram', 'whatsapp', 'github',
+  'linkedin', 'twitter', 'amazon', 'netflix', 'youtube', 'cloudflare', 'openai',
+  'chatgpt', 'zoom', 'adobe', 'dropbox', 'salesforce', 'spotify', 'reddit',
+  'paypal', 'stripe', 'chase', 'bankofamerica', 'wellsfargo'
+];
+
 export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
   const normalizeAndValidateUrl = (input: string): URL => {
     const trimmed = input.trim();
@@ -413,10 +434,23 @@ export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
     }
   }
 
-  const looksLikeTyposquatting = hostname.includes('g00gle') || hostname.includes('paypa1') || hostname.includes('faceb00k') || hostname.includes('netflix');
+  const normalizedHostname = hostname
+    .replace(/0/g, 'o')
+    .replace(/1/g, 'l')
+    .replace(/2/g, 'z')
+    .replace(/3/g, 'e')
+    .replace(/4/g, 'a')
+    .replace(/5/g, 's')
+    .replace(/8/g, 'b')
+    .replace(/@/g, 'a')
+    .replace(/vv/g, 'w');
 
-  if (looksLikeTyposquatting) {
-    scoreParts.push({ factor: 'Brand impersonation / simple typosquatting indicators', scoreImpact: 60 });
+  const isExactBrandDomain = TRUSTED_DOMAINS.some(d => hostname === d || hostname.endsWith(`.${d}`));
+  const containsBrandKeyword = BRAND_KEYWORDS.some(brand => normalizedHostname.includes(brand));
+  const isBrandImpersonation = containsBrandKeyword && !isExactBrandDomain;
+
+  if (isBrandImpersonation) {
+    scoreParts.push({ factor: 'Brand impersonation / typosquatting indicators', scoreImpact: 60 });
   }
 
   // --------- Security checks: HTTPS/TLS + Certificate expiry (best-effort) ---------
@@ -431,12 +465,27 @@ export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
   // --------- DNS validation + domain intelligence (best-effort) ---------
   const domainAgeDays = 3650; // fallback
   let dnsOk = true;
+  let resolvedIp = false;
 
   try {
-    await dns.resolveMx(hostname);
+    const ipv4 = await dns.resolve(hostname, 'A');
+    if (ipv4 && ipv4.length > 0) {
+      resolvedIp = true;
+    }
   } catch {
+    try {
+      const ipv6 = await dns.resolve(hostname, 'AAAA');
+      if (ipv6 && ipv6.length > 0) {
+        resolvedIp = true;
+      }
+    } catch {
+      resolvedIp = false;
+    }
+  }
+
+  if (!resolvedIp) {
     dnsOk = false;
-    scoreParts.push({ factor: 'DNS/MX resolution failed (domain likely risky or not configured)', scoreImpact: 25 });
+    scoreParts.push({ factor: 'DNS resolution failed (domain has no active IP mapping)', scoreImpact: 35 });
   }
 
   // --------- Threat database integration (graceful fallback) ---------
@@ -466,8 +515,18 @@ export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
 
   // --------- Risk scoring engine (0–100) ---------
   // Weighted sum, then clamp.
-  const rawScore = scoreParts.reduce((sum, p) => sum + p.scoreImpact, 0) + (isBlacklisted ? 25 : 0) + sslRisk;
-  const score = Math.max(0, Math.min(100, rawScore));
+  let rawScore = scoreParts.reduce((sum, p) => sum + p.scoreImpact, 0) + (isBlacklisted ? 55 : 0) + sslRisk;
+  let score = Math.max(0, Math.min(100, rawScore));
+
+  if (isBlacklisted) {
+    score = Math.max(score, 95);
+  }
+
+  // Override score for trusted domains that are not blacklisted
+  if (isExactBrandDomain && !isBlacklisted) {
+    score = 0;
+    scoreParts.length = 0;
+  }
 
   let verdict: ScanResult['verdict'] = 'Safe';
   if (score > 75) verdict = 'Dangerous';
@@ -517,7 +576,7 @@ export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
 
   const pushFactor = (f: EvidenceFinding | null) => {
     if (!f) return;
-    if (isWhitelisted && !isBlacklisted) return;
+    if ((isWhitelisted || isExactBrandDomain) && !isBlacklisted) return;
     riskFactors.push(f);
   };
 
@@ -615,14 +674,14 @@ export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
     });
   }
 
-  if (looksLikeTyposquatting) {
+  if (isBrandImpersonation) {
     pushFactor({
-      title: 'Brand Impersonation / Typosquatting (Heuristic)',
-      severity: 'High',
-      confidence: 70,
-      evidence: ['Domain matched known common typosquatting strings (e.g., g00gle, paypa1).'],
-      whyItMatters: 'Typosquatted brands aim to trick users into trusting a fraudulent destination.',
-      recommendedFix: 'Use the legitimate brand domain; avoid lookalike spellings.',
+      title: 'Brand Impersonation / Typosquatting',
+      severity: 'Critical',
+      confidence: 90,
+      evidence: [`The domain matches a known brand keyword but is not registered on the official trusted brand domain. Hostname: ${hostname}`],
+      whyItMatters: 'Phishing campaigns often register lookalike domains (e.g., paypa1, netflix-billing) to deceive users into thinking they are interacting with the genuine site.',
+      recommendedFix: 'Do not click links or enter passwords on this site. Navigate to the official brand homepage directly.',
       scoreImpact: 60
     });
   }
@@ -654,11 +713,22 @@ export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
     });
   }
 
-  const deepSummary = isBlacklisted
-    ? 'Threat databases flagged this URL as malicious.'
-    : riskFactors.length > 0
-      ? `Evidence-based risk indicators were detected: ${riskFactors.map(r => r.title).slice(0, 3).join('; ')}${riskFactors.length > 3 ? '…' : ''}.`
-      : 'No evidence-backed phishing indicators were detected from the available signals.';
+  let deepSummary = "";
+  if (isBlacklisted) {
+    deepSummary = "CRITICAL WARNING: This URL is a confirmed phishing/malicious website flagged by global security databases (VirusTotal / Google Safe Browsing). Avoid visiting this page and do not disclose any credentials.";
+  } else if ((isWhitelisted || isExactBrandDomain) && !isBlacklisted) {
+    deepSummary = "SAFE WEBSITE: This is a verified, trusted domain with no suspicious indicators. It is safe to use.";
+  } else if (isBrandImpersonation) {
+    deepSummary = `HIGH RISK WARNING: This website appears to be attempting brand impersonation (lookalike of a major brand like '${BRAND_KEYWORDS.find(b => normalizedHostname.includes(b)) || 'known brands'}'). This is a classic phishing technique designed to steal credentials.`;
+  } else if (score > 75) {
+    deepSummary = `CRITICAL WARNING: This URL exhibits multiple severe security anomalies, including: ${riskFactors.map(r => r.title).join(', ')}. It is highly likely to be a phishing or malicious landing page.`;
+  } else if (score > 50) {
+    deepSummary = `CAUTION: This website has suspicious traits, including: ${riskFactors.map(r => r.title).join(', ')}. Exercise extreme care, especially if asked to log in or enter sensitive data.`;
+  } else if (score > 20) {
+    deepSummary = `NOTICE: This URL has a low risk profile, but we detected minor anomalies: ${riskFactors.map(r => r.title).join(', ')}. Verify the URL structure before entering sensitive information.`;
+  } else {
+    deepSummary = "CLEAN WEBSITE: Our analysis did not find any indicators of phishing or malicious activity. The domain resolved successfully and has valid SSL security.";
+  }
 
   // Evidence-based Vulnerability Findings:
   // IMPORTANT: We only return findings we can verify from our passive signals.
@@ -715,7 +785,7 @@ export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
     checks: {
       domainAge: domainAgeDays,
       ssl,
-      typosquatting: looksLikeTyposquatting,
+      typosquatting: isBrandImpersonation,
       suspiciousRedirects: redirectRisk,
       fakeLoginIndicators,
       blacklisted: isBlacklisted
@@ -729,7 +799,7 @@ export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
     },
     domainInformation: {
       domainAgeDays,
-      typosquatting: looksLikeTyposquatting,
+      typosquatting: isBrandImpersonation,
       suspiciousTld,
       emailRoutingDetected: dnsOk
     },
@@ -741,7 +811,7 @@ export async function analyzeUrl(urlStr: string): Promise<ScanResult> {
     urlStructureAnalysis: {
       hasQuery: urlToScan.search.length > 0,
       queryKeys: Array.from(urlToScan.searchParams.keys()),
-      looksLikeTyposquatting: looksLikeTyposquatting,
+      looksLikeTyposquatting: isBrandImpersonation,
     },
     securityIndicators: {
       blacklisted: isBlacklisted,

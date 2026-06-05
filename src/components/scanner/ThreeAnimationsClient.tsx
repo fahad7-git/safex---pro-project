@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, memo } from 'react';
 import * as THREE_NS from 'three';
 
 type Variant = 'particles' | 'ring' | 'grid';
@@ -231,22 +231,9 @@ function ThreeCanvas({ variant, className }: { variant: Variant; className?: str
         const t = (performance.now() - t0) / 1000;
 
         if (variant === 'particles') {
-          group.rotation.y = t * 0.22;
-          group.rotation.x = Math.sin(t * 0.45) * 0.08;
-          group.scale.setScalar(1 + Math.sin(t * 0.6) * 0.03);
-
-          const points = mesh as any;
-          const pos = points.geometry.getAttribute('position');
-          for (let i = 0; i < pos.count; i += 40) {
-            const ix = i * 3;
-            const x = pos.array[ix] * (1 + Math.sin(t * 0.7 + i) * 0.002);
-            const y = pos.array[ix + 1] * (1 + Math.cos(t * 0.6 + i) * 0.002);
-            const z = pos.array[ix + 2] * (1 + Math.sin(t * 0.5 + i) * 0.002);
-            pos.array[ix] = x;
-            pos.array[ix + 1] = y;
-            pos.array[ix + 2] = z;
-          }
-          pos.needsUpdate = true;
+          group.rotation.y = t * 0.08;
+          group.rotation.x = Math.sin(t * 0.2) * 0.05;
+          group.scale.setScalar(1 + Math.sin(t * 0.3) * 0.02);
         } else if (variant === 'ring') {
           const glow = group.userData.__glow as any;
           group.rotation.y = t * 0.45;
@@ -314,7 +301,7 @@ function ThreeCanvas({ variant, className }: { variant: Variant; className?: str
   );
 }
 
-export default function ThreeAnimationsClient({ className }: { className?: string }) {
+const ThreeAnimationsClient = memo(function ThreeAnimationsClient({ className }: { className?: string }) {
   // Performance: render a single WebGL canvas/renderer to avoid WebGL context exhaustion.
   // If you want multiple effects layered, create them inside the same Three.js scene/renderer instead.
   return (
@@ -323,6 +310,8 @@ export default function ThreeAnimationsClient({ className }: { className?: strin
       <div className="absolute inset-0 bg-background/10" />
     </div>
   );
-}
+});
+
+export default ThreeAnimationsClient;
 
 

@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next.js production serverless functions are generated during build.
+  # Keep these empty here; set real values in Netlify UI.
+  NODE_VERSION = "20"
+

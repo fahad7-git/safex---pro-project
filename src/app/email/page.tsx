@@ -200,10 +200,10 @@ export default function EmailAnalyzerPage() {
               "border-l-primary bg-primary/5"
             )}>
               <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5" />
-                Safex-7 AI Deep Summary
+                <ShieldCheck className="w-5 h-5 text-primary" />
+                Scan Report & Verdict
               </h3>
-              <p className="text-foreground/80 leading-relaxed font-medium">
+              <p className="text-foreground/85 leading-relaxed font-semibold text-base">
                 {result.deepSummary}
               </p>
             </div>
@@ -212,28 +212,28 @@ export default function EmailAnalyzerPage() {
             <div className="glass-panel p-6">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-primary" />
-                Sender Authentication
+                Sender Verification Details
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-card/50 p-4 rounded-lg border border-border/50">
                   <div className="text-xs text-foreground/50 uppercase tracking-wider mb-2">SPF Record</div>
                   <div className={cn("font-bold flex items-center gap-2", result.checks.spf.valid ? "text-primary" : "text-destructive")}>
                     {result.checks.spf.valid ? <ShieldCheck className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                    {result.checks.spf.detail}
+                    {result.checks.spf.valid ? "Valid (Authorized)" : result.checks.spf.detail}
                   </div>
                 </div>
                 <div className="bg-card/50 p-4 rounded-lg border border-border/50">
                   <div className="text-xs text-foreground/50 uppercase tracking-wider mb-2">DKIM Signature</div>
                   <div className={cn("font-bold flex items-center gap-2", result.checks.dkim.valid ? "text-primary" : "text-destructive")}>
                     {result.checks.dkim.valid ? <ShieldCheck className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                    {result.checks.dkim.detail}
+                    {result.checks.dkim.valid ? "Verified Signature" : "Missing / Failed"}
                   </div>
                 </div>
                 <div className="bg-card/50 p-4 rounded-lg border border-border/50">
                   <div className="text-xs text-foreground/50 uppercase tracking-wider mb-2">DMARC Policy</div>
                   <div className={cn("font-bold flex items-center gap-2", result.checks.dmarc.valid ? "text-primary" : "text-destructive")}>
                     {result.checks.dmarc.valid ? <ShieldCheck className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                    {result.checks.dmarc.detail}
+                    {result.checks.dmarc.valid ? `Configured: ${result.checks.dmarc.detail}` : "No DMARC Configured"}
                   </div>
                 </div>
               </div>
@@ -253,41 +253,6 @@ export default function EmailAnalyzerPage() {
                     <div key={i} className="bg-background rounded-lg p-3 font-mono text-sm break-all text-blue-400 border border-border">
                       {link}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Risk Breakdown */}
-            <div className="glass-panel p-6">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-yellow-500" />
-                Risk Factor Breakdown
-              </h3>
-              
-              {result.breakdown.length === 0 ? (
-                <div className="text-center py-6 text-foreground/50">
-                  <ShieldCheck className="w-10 h-10 text-primary/30 mx-auto mb-3" />
-                  <p>No significant risk factors detected in the content.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {result.breakdown.map((item, index) => (
-                    <motion.div 
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 * index }}
-                      className="flex items-center justify-between bg-card/40 p-4 rounded-lg border border-destructive/20"
-                    >
-                      <div className="flex items-center gap-3">
-                        <AlertTriangle className="w-5 h-5 text-destructive" />
-                        <span className="font-medium">{item.factor}</span>
-                      </div>
-                      <div className="text-destructive font-bold bg-destructive/10 px-3 py-1 rounded-full">
-                        +{item.scoreImpact} pts
-                      </div>
-                    </motion.div>
                   ))}
                 </div>
               )}

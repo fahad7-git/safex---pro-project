@@ -1,0 +1,5 @@
+# Ignore Next build output
+.next/
+
+# Ignore generated/large client-only assets if needed
+

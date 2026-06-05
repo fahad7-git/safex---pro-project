@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import ThreeAnimationsClient from '@/components/scanner/ThreeAnimationsClient';
 import { Search, AlertTriangle, ShieldCheck, ShieldAlert, Shield, Download, Activity, Server, Lock, Globe, AlertOctagon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ScanResult } from '@/lib/engine';
@@ -12,7 +11,12 @@ export default function ScannerPage() {
   const searchParams = useSearchParams();
   const urlParam = searchParams?.get('url');
 
-  const [inputUrl, setInputUrl] = useState(urlParam || '');
+  // Avoid Next prerender errors in production builds.
+  const [inputUrl, setInputUrl] = useState('');
+
+  useEffect(() => {
+    if (urlParam) setInputUrl(urlParam);
+  }, [urlParam]);
   const [isScanning, setIsScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +89,6 @@ export default function ScannerPage() {
       
       {/* Search Header */}
       <div className="max-w-4xl mx-auto mb-12 relative">
-        <ThreeAnimationsClient className="absolute inset-0 -z-10 opacity-40" />
         <h1 className="text-3xl font-bold mb-6 text-center">Threat Intelligence Scanner</h1>
         <form onSubmit={onSubmit} className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-primary/50 to-blue-500/50 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
