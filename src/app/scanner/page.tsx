@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Search, AlertTriangle, ShieldCheck, ShieldAlert, Shield, Download, Activity, Server, Lock, Globe, AlertOctagon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ScanResult } from '@/lib/engine';
 
-export default function ScannerPage() {
+function ScannerContent() {
   const searchParams = useSearchParams();
   const urlParam = searchParams?.get('url');
 
@@ -606,5 +606,18 @@ export default function ScannerPage() {
         </motion.div>
       )}
     </div>
+  );
+}
+
+export default function ScannerPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-20 flex-grow flex flex-col items-center justify-center">
+        <Activity className="w-12 h-12 text-primary animate-spin mb-4" />
+        <h2 className="text-xl font-bold animate-pulse text-primary">Loading Scanner UI...</h2>
+      </div>
+    }>
+      <ScannerContent />
+    </Suspense>
   );
 }
